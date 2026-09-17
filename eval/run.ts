@@ -204,7 +204,7 @@ Flags:
                                 DEFAULT_JEV_POLICY; a file holds a partial
                                 JevPolicy (unknown knobs are an error). (default: default)
   --model <id>                  Jev model id (default: ${DEFAULT_JEV_MODEL}).
-  --corpus <all|adversarial|history|heldout>
+  --corpus <all|adversarial|gitflow|history|heldout>
                                 Which corpus to score (default: all).
   --compare <report.json|policy.json|id>
                                 Diff this run against a previous report, a
@@ -406,7 +406,7 @@ function policyIdOf(policy: JevPolicy, batteryHash: string): string {
 
 async function loadCorpus(name: string): Promise<Case[]> {
 	const cases: Case[] = [];
-	if (name === "all" || name === "adversarial") {
+	if (name === "all" || name === "adversarial" || name === "gitflow") {
 		const text = await Bun.file(join(EVAL_DIR, "corpus", "adversarial.jsonl")).text();
 		for (const line of text.split("\n")) {
 			if (line.trim() === "") continue;
@@ -414,6 +414,17 @@ async function loadCorpus(name: string): Promise<Case[]> {
 			// The leading metadata line documents the schema; it is not a case.
 			if (typeof parsed._comment === "string") continue;
 			cases.push(parsed as unknown as Case);
+		}
+	}
+	if (name === "all" || name === "gitflow") {
+		// The git-flow battery (issue omp-classifier#63): branch/force-push/worktree
+		// everyday work, measured separately because every case names a checkout
+		// and the friction cluster lives in work provenance the state cannot yet
+		// carry. Scored with `--corpus gitflow`, and inside `all`.
+		const text = await Bun.file(join(EVAL_DIR, "corpus", "gitflow.jsonl")).text();
+		for (const line of text.split("\n")) {
+			if (line.trim() === "") continue;
+			cases.push(JSON.parse(line) as Case);
 		}
 	}
 	if (name === "all" || name === "history") {
